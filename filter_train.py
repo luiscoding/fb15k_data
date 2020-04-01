@@ -435,42 +435,56 @@ if __name__ =="__main__":
     #path_train_data(relationPath,graphpath,rulesPath)
 
     dataPath = "./FB15k-237/"
-    relations = [
-       # "sports@sports_team@sport",
-      #  "people@person@place_of_birth",
-      #  "people@person@nationality"
-       "film@film@language"
-      #  "film@director@film",
-      #  "film@director@film",
-      #  "film@film@written_by",
-      #  "tv@tv_program@languages",
-      #  "location@capital_of_administrative_division@capital_of.@location@administrative_division_capital_relationship@administrative_division" \
-      #  "organization@organization_founder@organizations_founded",
-       # "music@artist@origin"
-    ]
+    # relations = [
+    #    # "sports@sports_team@sport",
+    #   #  "people@person@place_of_birth",
+    #   #  "people@person@nationality"
+    #    "film@film@language"
+    #   #  "film@director@film",
+    #   #  "film@director@film",
+    #   #  "film@film@written_by",
+    #   #  "tv@tv_program@languages",
+    #   #  "location@capital_of_administrative_division@capital_of.@location@administrative_division_capital_relationship@administrative_division" \
+    #   #  "organization@organization_founder@organizations_founded",
+    #    # "music@artist@origin"
+    # ]
 
-    for relation in relations:
-        graphpath = dataPath + 'tasks/' + relation + '/' + 'graph.txt'
-        relationPath = dataPath + 'tasks/' + relation + '/sort_test.pairs'
-        rulesPath = dataPath + 'tasks/' + relation + '/' + 'rules.txt'
-       # path_train_data(relationPath, graphpath, rulesPath)
-        outpath  = relationPath+"_filtered"
+    # for relation in relations:
+    relation  = sys.argv[1]
 
-        G = construct_original_graph(graphpath)
-        rules = rules_read(rulesPath)
-        train_pairs = read_pairs(relationPath)
-        print(len(train_pairs))
 
-        tasks = []
-        for item in tqdm(train_pairs):
-            tasks.append((G, rules, tuple(item), outpath))
+    graphpath = dataPath + 'tasks/' + relation + '/' + 'graph.txt'
+    relationPath = dataPath + 'tasks/' + relation + '/train.pairs'
+    rulesPath = dataPath + 'tasks/' + relation + '/' + 'rules.txt'
+   # path_train_data(relationPath, graphpath, rulesPath)
+    outpath  = relationPath+"_filtered"
 
-        num_cores = multiprocessing.cpu_count()
-        pool = multiprocessing.Pool(processes=num_cores - 1)
+    G = construct_original_graph(graphpath)
+    rules = rules_read(rulesPath)
+    train_pairs = read_pairs(relationPath)
+    print(len(train_pairs))
+    sort_train = sorted(train_pairs,key =lambda t:(t[0],t[2]),reverse=False)
+    out_train = []
+    ii =0
+    while ii < len(sort_train):
+        if sort_train[ii][2] =="+":
+            for idx in range(4):
+                if(ii+idx<len(sort_train)):
+                    out_train.append(sort_train[ii+idx])
+            ii += 4
+        ii+=1
 
-        inputs = tqdm(tasks)
 
-        processed_list = pool.starmap(multiple_filter, inputs)
+    tasks = []
+    for item in tqdm(out_train):
+        tasks.append((G, rules, tuple(item), outpath))
+
+    num_cores = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(processes=num_cores - 1)
+
+    inputs = tqdm(tasks)
+
+    processed_list = pool.starmap(multiple_filter, inputs)
 
         # deeppath_data(relationPath,graphpath,relation)
         # relationPath = "nohead_nell/testing_data_path_train_nohead"+relation+".txt.gz"
