@@ -7,5 +7,5 @@ relations=(
 
 
 for relation in ${relations[*]}; do
-    python3 filter_train.py  $relation &
+    python3 filter_train.py  $relation
 done

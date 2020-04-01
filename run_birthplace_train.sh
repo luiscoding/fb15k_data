@@ -7,5 +7,5 @@ relations=(
 #relations=("@tv@tv_program@languages")
 
 for relation in ${relations[*]}; do
-    python3 filter_train.py  $relation &
+    python3 filter_train.py  $relation
 done
