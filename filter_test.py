@@ -147,8 +147,8 @@ def read_pairs(relationPath):
             h,t = line.strip("\n").split(":")[0].strip().split(",")
             h = h.split("$")[1]
             t = t.split("$")[1]
-            h = "/"+h.replace("_","/")
-            t = "/" + t.replace("_", "/")
+            h = "/m/"+h[2:]
+            t = "/m/"+t[2:]
             lbl = line.strip("\n").split(":")[1].strip()
             train_pairs.append((h,t,lbl))
     return train_pairs
@@ -245,7 +245,7 @@ def path_test_data(relationPath,graphpath,rulesPath):
                     rl = []
                     for ii in pp[1:]:
                         rl.append(ii[1])
-                        paths_.append("@".join(rl))
+                    paths_.append("@".join(rl))
                 fout.write((str(1) +"&"+" ".join(paths_)+"&"+h+"&"+t+"\n"))
                 fout.flush()
             else:
@@ -400,7 +400,7 @@ def multiple_filter(G,rules,pair,outpath):
                 rl = []
                 for ii in pp[1:]:
                     rl.append(ii[1])
-                    paths_.append("@".join(rl))
+                paths_.append("@".join(rl))
             fout.write((str(1) + "&" + " ".join(paths_) + "&" + h + "&" + t + "\n"))
             fout.flush()
         else:
@@ -435,19 +435,19 @@ if __name__ =="__main__":
     #path_train_data(relationPath,graphpath,rulesPath)
 
     dataPath = "./FB15k-237/"
-    relations = [
-       # "sports@sports_team@sport",
-      #  "people@person@place_of_birth",
-      #  "people@person@nationality"
-       "film@film@language"
-      #  "film@director@film",
-      #  "film@director@film",
-      #  "film@film@written_by",
-      #  "tv@tv_program@languages",
-      #  "location@capital_of_administrative_division@capital_of.@location@administrative_division_capital_relationship@administrative_division" \
-      #  "organization@organization_founder@organizations_founded",
-       # "music@artist@origin"
-    ]
+    # relations = [
+    #    # "sports@sports_team@sport",
+    #   #  "people@person@place_of_birth",
+    #   #  "people@person@nationality"
+    #    "film@film@language"
+    #   #  "film@director@film",
+    #   #  "film@director@film",
+    #   #  "film@film@written_by",
+    #   #  "tv@tv_program@languages",
+    #   #  "location@capital_of_administrative_division@capital_of.@location@administrative_division_capital_relationship@administrative_division" \
+    #   #  "organization@organization_founder@organizations_founded",
+    #    # "music@artist@origin"
+    # ]
 
     # for relation in relations:
     relation  = sys.argv[1]
@@ -456,7 +456,7 @@ if __name__ =="__main__":
     relationPath = dataPath + 'tasks/' + relation + '/sort_test.pairs'
     rulesPath = dataPath + 'tasks/' + relation + '/' + 'rules.txt'
    # path_train_data(relationPath, graphpath, rulesPath)
-    outpath  = relationPath+"_filtered"
+    outpath  = relationPath+"_filtered_noinv"
 
     G = construct_original_graph(graphpath)
     rules = rules_read(rulesPath)
@@ -464,7 +464,7 @@ if __name__ =="__main__":
     print(len(train_pairs))
 
     tasks = []
-    for item in tqdm(train_pairs[1500:2000]):
+    for item in tqdm(train_pairs):
         tasks.append((G, rules, tuple(item), outpath))
 
     num_cores = multiprocessing.cpu_count()
