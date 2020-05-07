@@ -141,7 +141,7 @@ def sorted_train(relationPath):
 
 def read_pairs(relationPath):
     train_pairs = list()
-    with open(relationPath,"r") as f:
+    with open(relationPath+'train_temp.pairs',"r") as f:
         fin = f.readlines()
         for line in fin:
             h,t = line.strip("\n").split(":")[0].strip().split(",")
@@ -203,7 +203,7 @@ def path_train_data(relationPath,graphpath,rulesPath):
         ii+=1
 
     G = construct_original_graph(graphpath)
-    fout = open(relationPath+"_path_filtered_train","w")
+    fout = open(relationPath+"_path_filtered_train_noinv","w")
     for pair in tqdm(out_train):
         h,t,lbl = pair
         if(G.has_node(h) and G.has_node(t)):
@@ -213,8 +213,9 @@ def path_train_data(relationPath,graphpath,rulesPath):
                 for pp in tqdm(paths):
                     rl = []
                     for ii in pp[1:]:
+                        print(pp)
                         rl.append(ii[1])
-                        paths_.append("@".join(rl))
+                    paths_.append("@".join(rl))
                 fout.write((str(1) +"&"+" ".join(paths_)+"&"+h+"&"+t+"\n"))
                 fout.flush()
             else:
@@ -234,7 +235,7 @@ def path_test_data(relationPath,graphpath,rulesPath):
     train_pairs = read_pairs(relationPath)
 
     G = construct_original_graph(graphpath)
-    fout = open(relationPath+"_path_filtered","w")
+    fout = open(relationPath+"_path_filtered_noinv","w")
     for pair in tqdm(train_pairs):
         h,t,lbl = pair
         if(G.has_node(h) and G.has_node(t)):
@@ -245,7 +246,7 @@ def path_test_data(relationPath,graphpath,rulesPath):
                     rl = []
                     for ii in pp[1:]:
                         rl.append(ii[1])
-                        paths_.append("@".join(rl))
+                    paths_.append("@".join(rl))
                 fout.write((str(1) +"&"+" ".join(paths_)+"&"+h+"&"+t+"\n"))
                 fout.flush()
             else:
@@ -279,14 +280,13 @@ def sort_deep(relationPath):
             lbl = line.strip("\n").split(":")[1].strip()
             train_pairs.append((h,t,lbl))
     train_read = dict()
-    with  open(relationPath + "_path_filtered_test", "r") as ffilter:
+    with  open(relationPath + "_path_filtered", "r") as ffilter:
         fin = ffilter.readlines()
         for line in fin:
             h = line.strip("\n").split("\t")[2]
             t = line.strip("\n").split("\t")[3]
             print(h,t)
             train_read[(h,t)] = line
-
 
     with open(relationPath + "_path_filtered_test_deep", "w") as fout:
         for key in train_pairs:
@@ -302,10 +302,10 @@ def rewriteFile(relationPath):
             fout.write("&".join(line.split("\t")))
     fout.close()
 
-def rulesEmbedding(dataPath):
+def rulesEmbedding(dataPath,relation):
     embedding_rules = []
-    headpath2id = open(dataPath+"rules2id.txt","w")
-    headpath2vec = open(dataPath+"rules2vec.npy", "wb")
+    headpath2id = open(dataPath+"headpath2id_nohead@"+relation+".txt","w")
+    headpath2vec = open(dataPath+"embedding_paths_new_train_nohead@"+relation+".npy", "wb")
     with open(dataPath+"rules.txt", "r")as f:
         lines = f.readlines()
         for line in lines:
@@ -317,7 +317,7 @@ def rulesEmbedding(dataPath):
             rel, idx = line.split("\t")
             relation_id_dict[rel] = idx
 
-    rel_vec = np.loadtxt(dataPath + '/relation2vec.unif')
+    rel_vec = np.loadtxt(dataPath + 'relation2vec.unif')
 
     count = 0
     headpath2id.write("@".join("") + "&" + str(count)+"\n")
@@ -327,7 +327,7 @@ def rulesEmbedding(dataPath):
     for ii in range(len(x_0)):
         x_0[ii]=0
     embedding_res.append(x_0)
-    for head_rule in embedding_rules:
+    for head_rule in tqdm(embedding_rules):
         headpath2id.write("@".join(head_rule) + "&" + str(count)+"\n")
         count += 1
         x_0 = rel_vec[0]
@@ -342,8 +342,45 @@ def rulesEmbedding(dataPath):
 
     embedding_matrix = np.array(embedding_res).astype(np.float32)
 
+    print(embedding_matrix.shape)
+    np.save(headpath2vec, embedding_matrix, allow_pickle=True)
+
+
+def oneEmbedding(dataPath,relation):
+    embedding_rules = []
+    headpath2vec = open("onehot.npy", "wb")
+    with open(dataPath+"rules.txt", "r")as f:
+        lines = f.readlines()
+        for line in lines:
+            embedding_rules.append(line.strip().split("\t"))
+
+    relation_id_dict = {}
+    with open(dataPath +'relation2id.txt', "r") as f1:
+        for line in f1.readlines():
+            rel, idx = line.split("\t")
+            relation_id_dict[rel] = idx
+
+    rel_vec = np.loadtxt(dataPath + 'relation2vec.unif')
+
+    count = 0
+
+    count = 1
+    embedding_res = []
+    x_0 = rel_vec[0]
+    for ii in range(len(x_0)):
+        x_0[ii]=0
+    embedding_res.append(x_0)
+
+    x_1 = rel_vec[1]
+    for ii in range(len(x_1)):
+        x_1[ii]=1
+    embedding_res.append(x_1)
+
+    embedding_matrix = np.array(embedding_res).astype(np.float32)
+
     print(type(embedding_matrix))
     np.save(headpath2vec, embedding_matrix, allow_pickle=True)
+
 
 
 def deeppath_data(relationPath,graphpath,relation):
@@ -420,6 +457,69 @@ def multiple_filter(G,rules,pair,outpath):
             fout.write((str(0) + "&" + " ".join([]) + "&" + h + "&" + t + "\n"))
             fout.flush()
 
+def reorderTest(relationPath,relation):
+    train_pairs = list()
+    with open(relationPath+"sort_test.pairs", "r") as fdeep:
+        fin = fdeep.readlines()
+        for line in fin:
+            lbl = line.strip("\n").split(":")[-1].strip()
+            h, t = line.strip("\n").split(":")[0].strip().split(",")
+            h = "/m/"+h.split("$")[1][2:]
+            t = "/m/"+t.split("$")[1][2:]
+            train_pairs.append((h, t,lbl))
+    train_read = dict()
+    with  open(relationPath + "sort_test.pairs_filtered", "r") as ffilter:
+        fin = ffilter.readlines()
+        for line in fin:
+            lbl,txt,h,t = line.strip("\n").split("&")
+            h ="/m/"+ h.replace("/","_")[3:]
+            t ="/m/"+ t.replace("/","_")[3:]
+            train_read[(h, t)] = [lbl,txt,h,t]
+
+    with open(relationPath+"testing_data_path_train_nohead@"+relation+".txt","w") as fout:
+        for key in train_pairs:
+            if((key[0], key[1]) in train_read):
+                if key[2] =="+":
+                    fout.write((str(1) + "&" + train_read[(key[0], key[1])][1] + "&" + key[0] + "&" + key[1] + "\n"))
+                    fout.flush()
+                else:
+                    fout.write((str(0) + "&" + train_read[(key[0], key[1])][1]+ "&" + key[0] + "&" + key[1] + "\n"))
+                    fout.flush()
+            else:
+                if key[2] =="+":
+                    fout.write((str(1) + "&" + " ".join([]) + "&" + key[0] + "&" + key[1] + "\n"))
+                    fout.flush()
+                else:
+                    fout.write((str(0) + "&" + " ".join([]) + "&" + key[0] + "&" + key[1] + "\n"))
+                    fout.flush()
+
+
+def reorderTrain(relationPath,relation,rulePath):
+    train_pairs = list()
+    with open(relationPath+"train.pairs", "r") as fdeep:
+        fin = fdeep.readlines()
+        for line in fin:
+            lbl = line.strip("\n").split(":")[-1].strip()
+            h, t = line.strip("\n").split(":")[0].strip().split(",")
+            h = "/m/"+h.split("$")[1][2:]
+            t = "/m/"+t.split("$")[1][2:]
+            train_pairs.append((h, t,lbl))
+    train_read = dict()
+    with  open(relationPath + "train.pairs_filtered", "r") as ffilter:
+        fin = ffilter.readlines()
+        for line in fin:
+            lbl,txt,h,t = line.strip("\n").split("&")
+            h ="/m/"+ h.replace("/","_")[3:]
+            t = "/m/"+ t.replace("/","_")[3:]
+            train_read[(h, t)] = [lbl,txt,h,t]
+
+    with open(relationPath+"training_data_path_train_nohead@"+relation+".txt","w") as fout:
+        for key in train_read:
+            if((key[0], key[1],"+") in train_pairs or (key[0], key[1],"-") in train_pairs):
+                fout.write("&".join(train_read[key])+"\n")
+                fout.flush()
+
+
 
 
 
@@ -450,51 +550,54 @@ if __name__ =="__main__":
     # ]
 
     # for relation in relations:
-    relation  = sys.argv[1]
+    relation  ="tv@tv_program@languages"
 
 
     graphpath = dataPath + 'tasks/' + relation + '/' + 'graph.txt'
-    relationPath = dataPath + 'tasks/' + relation + '/train.pairs'
+    relationPath = dataPath + 'tasks/' + relation+"/"
     rulesPath = dataPath + 'tasks/' + relation + '/' + 'rules.txt'
    # path_train_data(relationPath, graphpath, rulesPath)
     outpath  = relationPath+"_filtered"
+    #oneEmbedding(dataPath+ 'tasks/' + relation +'/',relation)
 
-    G = construct_original_graph(graphpath)
-    rules = rules_read(rulesPath)
-    train_pairs = read_pairs(relationPath)
-    print(len(train_pairs))
-    sort_train = sorted(train_pairs,key =lambda t:(t[0],t[2]),reverse=False)
-    out_train = []
-    ii =0
-    while ii < len(sort_train):
-        if sort_train[ii][2] =="+":
-            for idx in range(4):
-                if(ii+idx<len(sort_train)):
-                    out_train.append(sort_train[ii+idx])
-            ii += 4
-        ii+=1
-
-
-    tasks = []
-    for item in tqdm(out_train):
-        tasks.append((G, rules, tuple(item), outpath))
-
-    num_cores = multiprocessing.cpu_count()
-    pool = multiprocessing.Pool(processes=num_cores - 1)
-
-    inputs = tqdm(tasks)
-
-    processed_list = pool.starmap(multiple_filter, inputs)
+    # G = construct_original_graph(graphpath)
+    # rules = rules_read(rulesPath)
+    # train_pairs = read_pairs(relationPath)
+    # print(len(train_pairs))
+    # sort_train = sorted(train_pairs,key =lambda t:(t[0],t[2]),reverse=False)
+    # out_train = []
+    # ii =0
+    # while ii < len(sort_train):
+    #     if sort_train[ii][2] =="+":
+    #         for idx in range(4):
+    #             if(ii+idx<len(sort_train)):
+    #                 out_train.append(sort_train[ii+idx])
+    #         ii += 4
+    #     ii+=1
+    #
+    #
+    # tasks = []
+    # for item in tqdm(out_train):
+    #     tasks.append((G, rules, tuple(item), outpath))
+    #
+    # num_cores = multiprocessing.cpu_count()
+    # pool = multiprocessing.Pool(processes=num_cores - 1)
+    #
+    # inputs = tqdm(tasks)
+    #
+    # processed_list = pool.starmap(multiple_filter, inputs)
 
         # deeppath_data(relationPath,graphpath,relation)
         # relationPath = "nohead_nell/testing_data_path_train_nohead"+relation+".txt.gz"
         # length(relationPath,relation)
 
-   # path_test_data(relationPath,graphpath,rulesPath)
+    path_train_data(relationPath,graphpath,rulesPath)
 
     #rewriteFile(relationPath)
+   # rulesEmbedding(dataPath+ 'tasks/' + relation +'/',relation)
+    #reorderTrain(relationPath,relation)
+    #reorderTest(relationPath,relation)
 
-    #rulesEmbedding(dataPath+ 'tasks/' + relation +'/')
 
     #sort_deep(relationPath)
 

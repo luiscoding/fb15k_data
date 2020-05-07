@@ -464,7 +464,7 @@ if __name__ =="__main__":
     print(len(train_pairs))
 
     tasks = []
-    for item in tqdm(train_pairs):
+    for item in tqdm(train_pairs[1500:2000]):
         tasks.append((G, rules, tuple(item), outpath))
 
     num_cores = multiprocessing.cpu_count()
