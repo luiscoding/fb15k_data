@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 relations=(
 # "people@person@place_of_birth"
-  "people@person@nationality"
-# "film@film@language"
+ # "people@person@nationality"
+ "film@film@written_by"
 )
 
 
