@@ -400,7 +400,10 @@ def multiple_filter(G,rules,pair,outpath):
                 rl = []
                 for ii in pp[1:]:
                     rl.append(ii[1])
-                paths_.append("@".join(rl))
+                if (tuple(rl) in rules):
+                    paths_.append("@".join(rl))
+                else:
+                    print("error!! positive sample's path not include ruleset")
             fout.write((str(1) + "&" + " ".join(paths_) + "&" + h + "&" + t + "\n"))
             fout.flush()
         else:
